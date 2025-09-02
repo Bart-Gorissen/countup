@@ -38,7 +38,7 @@ std::vector<TreeNode<T>*> constructBinTrees(int nLeafs) {
 }
 
 template<typename T, typename U> // T is the type of evalutation, U is the type used for computation
-TreeNode<U>* findSolution(const std::vector<T>& constants, T target, std::function<bool(T, U)> equals) {
+TreeNode<U>* findSolution(const std::vector<T>& constants, T target, std::function<bool(T, U)> equals, const std::vector<std::function<bool(U)>>& intermediaryConditions = {}) {
     if (constants.empty()) return nullptr;
 
     TreeNode<U>* res = nullptr;
@@ -59,7 +59,8 @@ TreeNode<U>* findSolution(const std::vector<T>& constants, T target, std::functi
                 }
 
                 try {
-                    tree->compute();
+                    tree->compute(intermediaryConditions);
+                    if (!tree->hasComputed()) continue;
                     if (equals(target, tree->getValue())) {
                         res = (dynamic_cast<LeafNode<U>*>(tree))
                             ? static_cast<TreeNode<U>*>(new LeafNode<U>(*static_cast<LeafNode<U>*>(tree)))
@@ -120,10 +121,13 @@ int main(int argc, char* argv[]) {
     TreeNode<double>* solution = findSolution<int, double>(constants, target, [](int a, double b) {
         double aux;
         return std::modf(b, &aux) == 0.0 && static_cast<int>(aux) == a;
-    });
+    }, {[](double a) {
+        double aux;
+        return std::modf(a, &aux) == 0.0;
+    }});
 
     if (solution) {
-        std::cout << "Solution found: " << target << std::endl << solution->toString() << std::endl;
+        std::cout << "Solution found: " << target << std::endl << solution->toString([](double a) { return std::to_string(static_cast<int>(a)); }) << std::endl;
         delete solution;
     } else {
         std::cout << "No solution found." << std::endl;

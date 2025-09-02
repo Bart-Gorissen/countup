@@ -18,6 +18,7 @@ class TreeNode {
 protected:
     T value;
     OperationType operation;
+    bool isComputed = false;
     
 public:
     TreeNode() : value(0), operation(OperationType::None) {}
@@ -33,12 +34,15 @@ public:
     void setOperation(OperationType op) { this->operation = op; }
 
     virtual void compute() = 0;
+    virtual void compute(const std::vector<std::function<bool(T)>>& conditions) = 0;
+    bool hasComputed() { return isComputed; }
+
     virtual bool incOperation() = 0;
     virtual std::vector<TreeNode<T>*> getLeafs() = 0;
 
-    virtual std::vector<std::string> toStringVec() = 0;
-    std::string toString() {
-        std::vector<std::string> lines = toStringVec();
+    virtual std::vector<std::string> toStringVec(std::function<std::string(T)> toStringFunc = std::to_string) = 0;
+    std::string toString(std::function<std::string(T)> toStringFunc = std::to_string) {
+        std::vector<std::string> lines = toStringVec(toStringFunc);
         std::string result;
         for (size_t i = 0; i < lines.size(); ++i) {
             result += lines[i];
@@ -52,12 +56,18 @@ template <typename T>
 class LeafNode : public TreeNode<T> {
 public:
     LeafNode() : TreeNode<T>() {}
-    LeafNode(T value) : TreeNode<T>() { this->value = value; }
+    LeafNode(T value) : TreeNode<T>() { this->value = value; this->isComputed = true; }
 
-    void compute () override {}
+    void compute () override { this->isComputed = true; }
+    void compute (const std::vector<std::function<bool(T)>>& conditions) override {
+        for (std::function<bool(T)> condition : conditions) {
+            if (!condition(this->value)) return;
+        }
+        this->isComputed = true;
+    }
     bool incOperation() override { return true; }
     std::vector<TreeNode<T>*> getLeafs() override { return {this}; }
-    std::vector<std::string> toStringVec() override { return {std::to_string(this->value)}; }
+    std::vector<std::string> toStringVec(std::function<std::string(T)> toStringFunc = std::to_string) override { return {toStringFunc(this->value)}; }
 };
 
 template <typename T>
@@ -85,12 +95,14 @@ public:
     void addChild(TreeNode<T>* child) { children.push_back(child); }
     void setOperation(OperationType op) { this->operation = op; }
 
-    void compute() {
+    void compute() override {
+        this->isComputed = false;
         std::vector<T> childValues;
 
         // compute for all children
         for (auto child : children) {
             child->compute();
+            if (!child->hasComputed()) return;
             childValues.push_back(child->getValue());
         }
 
@@ -112,6 +124,45 @@ public:
                 throw std::logic_error("Unknown operation");
                 break;
         }
+        this->isComputed = true;
+    }
+
+    void compute (const std::vector<std::function<bool(T)>>& conditions) override {
+        this->isComputed = false;
+        std::vector<T> childValues;
+
+        // compute for all children
+        for (auto child : children) {
+            child->compute(conditions);
+            if (!child->hasComputed()) return;
+            childValues.push_back(child->getValue());
+        }
+
+        switch (this->operation) {
+            case OperationType::Addition:
+                this->value = addition(childValues);
+                break;
+            case OperationType::Subtraction:
+                this->value = subtraction(childValues);
+                break;
+            case OperationType::Multiplication:
+                this->value = multiplication(childValues);
+                break;
+            case OperationType::Division:
+                this->value = division(childValues);
+                break;
+            case OperationType::None:
+            default:
+                throw std::logic_error("Unknown operation");
+                break;
+        }
+
+        // if it succeeded, then check that all conditions are satisfied
+        for (std::function<bool(T)> condition : conditions) {
+            if (!condition(this->value)) return;
+        }
+
+        this->isComputed = true;
     }
 
     bool incOperation() {
@@ -137,26 +188,28 @@ public:
         return leafs;
     }
 
-    std::vector<std::string> toStringVec() override {
+    std::vector<std::string> toStringVec(std::function<std::string(T)> toStringFunc = std::to_string) override {
         // get subtrees
         std::vector<std::vector<std::string>> subtrees;
         for (TreeNode<T>* child : children) {
-            subtrees.push_back(child->toStringVec());
+            subtrees.push_back(child->toStringVec(toStringFunc));
         }
         // get widths
         std::vector<size_t> widths(subtrees.size());
-        size_t width = 0;
         size_t depth = 0;
+        size_t center = 0;
+        size_t width = 0;
         for (size_t i = 0; i < subtrees.size(); ++i) {
             widths[i] = subtrees[i][0].size();
-            // for (const auto& line : subtrees[i]) widths[i] = std::max(widths[i], line.size());
             depth = std::max(depth, subtrees[i].size());
+            if (i < subtrees.size() / 2) center += widths[i] + 1;
             width += widths[i] + 1;
         }
+        center--;
+        width--;
 
         std::vector<std::string> result(depth+1);
-        std::string opLine(width-1, ' ');
-        size_t pos = std::max((width / 2) - 1, (size_t)0);
+        std::string opLine(width, ' ');
         char opchar;
         switch(this->operation) {
             case OperationType::Addition: opchar = '+'; break;
@@ -166,7 +219,7 @@ public:
             case OperationType::None:
             default: opchar = '?'; break;
         }
-        opLine[pos] = opchar;
+        opLine[center] = opchar;
         result[0] = opLine;
 
         for (size_t d = 0; d < depth; ++d) {
@@ -174,16 +227,17 @@ public:
 
             for (size_t i = 0; i < subtrees.size(); ++i) {
                 if (d >= subtrees[i].size()) {
-                    result[d+1] += std::string(widths[i] + 1, ' ');
+                    result[d+1] += std::string(widths[i], ' ');
                 }
                 else {
-                    result[d+1] += (subtrees[i])[d] + ' ';
+                    result[d+1] += (subtrees[i])[d];
                 }
+                if (i < subtrees.size() - 1) result[d+1] += ' ';
             }
         }
 
         return result;
-        }
-    };
+    }
+};
 
 #endif
