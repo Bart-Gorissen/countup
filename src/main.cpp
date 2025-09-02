@@ -6,110 +6,6 @@
 #include "operation.h"
 #include "treeNode.h"
 
-// template <typename T>
-// std::vector<TreeNode<T>*> constructTrees(std::vector<T> constants) {
-//     std::vector<TreeNode<T>*> resTrees;
-//     if (constants.empty()) return resTrees;
-//     if (constants.size() == 1) {
-//         resTrees.push_back(new LeafNode<T>(constants[0]));
-//         return resTrees;
-//     }
-
-//     for (int i = 1; i < pow(2, constants.size()) - 1; ++i)
-//     {
-//         std::vector<T> leftConstants;
-//         std::vector<T> rightConstants;
-//         int mask = i;
-//         for (size_t j = 0; j < constants.size(); ++j ) {
-//             // std::cout << "Mask: " << mask << ", Bit: " << (mask & 1) << ", j: " << j << std::endl;
-//             if (mask & 1) {
-//                 rightConstants.push_back(constants[j]);
-//             } else {
-//                 leftConstants.push_back(constants[j]);
-//             }
-//             mask >>= 1;
-//         }
-//         if (leftConstants.empty() || rightConstants.empty()) {
-//             mask = i;
-//             for (size_t j = 0; j < constants.size(); ++j ) {
-//                 std::cout << "Mask: " << mask << ", Bit: " << (mask & 1) << ", j: " << j << std::endl;
-//                 mask >>= 1;
-//             }
-
-
-//             std::cout << "Skipping empty split: "; 
-//             for ( auto c : constants) std::cout << c << " ";
-//             std::cout << std::endl;
-//             continue;
-//         }
-
-//         std::vector<TreeNode<T>*> leftTrees = constructTrees(leftConstants);
-//         std::vector<TreeNode<T>*> rightTrees = constructTrees(rightConstants);
-
-//         for (TreeNode<T>* lt : leftTrees ) {
-//             for (TreeNode<T>* rt : rightTrees) {
-//                 InternalNode<T>* internalAddNode = new AddNode<T>(0);
-//                 TreeNode<T>* aux1 = new TreeNode<T>(*lt);
-//                 TreeNode<T>* aux2 = new TreeNode<T>(*rt);
-//                 internalAddNode->addChild(aux1);
-//                 internalAddNode->addChild(aux2);
-//                 resTrees.push_back(internalAddNode);
-                
-            
-//                 InternalNode<T>* internalSubNode = new SubNode<T>(0);
-//                 internalSubNode->addChild(new TreeNode<T>(*lt));
-//                 internalSubNode->addChild(new TreeNode<T>(*rt));
-//                 resTrees.push_back(internalSubNode);
-                
-//                 InternalNode<T>* internalMultNode = new MultNode<T>(1);
-//                 internalMultNode->addChild(new TreeNode<T>(*lt));
-//                 internalMultNode->addChild(new TreeNode<T>(*rt));
-//                 resTrees.push_back(internalMultNode);
-                
-//                 InternalNode<T>* internalDivNode = new DivNode<T>(1);
-//                 internalDivNode->addChild(new TreeNode<T>(*lt));
-//                 internalDivNode->addChild(new TreeNode<T>(*rt));
-//                 resTrees.push_back(internalDivNode);
-//             }
-//         }
-//     }
-
-//     return resTrees;
-// }
-
-// template <typename T, typename U>
-// bool hittarget(std::vector<T> constants, T target) {
-//     if (constants.empty()) return false;
-
-//     if (constants.size() == 1) {
-//         return constants[0] == target;
-//     }
-
-//     std::vector<U> constantsCast;
-//     for (const auto& c : constants) {
-//         constantsCast.push_back(static_cast<U>(c));
-//     }
-
-//     bool success = false;
-
-//     std::vector<TreeNode<U>*> allTrees = constructTrees<U>(constantsCast);
-//     std::cout << "Constructed " << allTrees.size() << " trees for constants" << std::endl;
-
-//     for (const auto& tree : allTrees) {
-//         tree->compute();
-//         if (static_cast<T>(tree->getValue()) == target) {
-//             success = true;
-//         }
-//     }
-
-//     // Clean up memory
-//     for (const auto& tree : allTrees) {
-//         delete tree;
-//     }
-
-//     return success;
-// }
-
 template<typename T>
 std::vector<TreeNode<T>*> constructBinTrees(int nLeafs) {
     if (nLeafs < 1) return {};
@@ -140,7 +36,6 @@ std::vector<TreeNode<T>*> constructBinTrees(int nLeafs) {
 
     return result;
 }
-
 
 template<typename T, typename U> // T is the type of evalutation, U is the type used for computation
 TreeNode<U>* findSolution(const std::vector<T>& constants, T target, std::function<bool(T, U)> equals) {
